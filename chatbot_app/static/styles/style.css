@@ -1,0 +1,236 @@
+:root {
+    --gov-blue-dark: #004580;   /* Azul padrão Governo */
+    --gov-blue-light: #167abc;
+    --gov-gray-light: #f5f5f5;
+    --gov-gray-border: #cccccc;
+    --white: #ffffff;
+    --text-main: #333333;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: "Rawline", "Raleway", sans-serif; /* Fontes comuns em design gov */
+}
+
+body {
+    margin: 0;
+    background-color: var(--gov-gray-light);
+    color: var(--text-main);
+}
+
+/* ===== CONTAINER PRINCIPAL ===== */
+.app {
+    max-width: 900px;
+    margin: 10px auto;
+    background: var(--white);
+    border-radius: 4px; /* Bordas menos arredondadas para ar profissional */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow: hidden;
+    border: 1px solid var(--gov-gray-border);
+}
+
+/* ===== HEADER GOVERNAMENTAL ===== */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    background: var(--gov-blue-dark);
+    color: var(--white);
+}
+
+.logo img {
+    max-height: 50px;
+}
+
+.header h1 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.status {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+#health-indicator {
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.2);
+}
+
+/* ===== ÁREA DO CHAT ===== */
+.chat-area {
+    height: 550px;
+    display: flex;
+    flex-direction: column;
+    background: #fdfdfd;
+}
+
+.messages {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== BALÕES DE MENSAGEM ===== */
+.bubble {
+    max-width: 80%;
+    padding: 15px 20px;
+    font-size: 1rem;
+    line-height: 1.5;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.message.bot .bubble {
+    background: var(--gov-blue-light);
+    color: var(--white);
+    border-radius: 0 15px 15px 15px;
+    margin-left: 10px;
+}
+
+.message.user .bubble {
+    background: #e9ecef;
+    color: var(--text-main);
+    border-radius: 15px 15px 0 15px;
+    border: 1px solid #dee2e6;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--white);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* ===== BOTÕES DE OPÇÕES (Quick Reply) ===== */
+.quick-options {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.quick-options button {
+    background: var(--white);
+    color: var(--gov-blue-dark);
+    border: 2px solid var(--white);
+    padding: 8px 16px;
+    font-weight: 600;
+    transition: all 0.2s;
+    border-radius: 4px;
+}
+
+.quick-options button:hover {
+    background: var(--gov-blue-dark);
+    color: var(--white);
+    transform: translateY(-2px);
+}
+
+/* ===== INPUT DE TEXTO ===== */
+.input-area {
+    padding: 25px 30px;
+    background: var(--white);
+    border-top: 2px solid var(--gov-gray-light);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+textarea {
+    border: 2px solid var(--gov-gray-border);
+    border-radius: 8px;
+    padding: 15px;
+    transition: border-color 0.3s;
+    font-size: 1rem;
+}
+
+textarea:focus {
+    border-color: var(--gov-blue-light);
+    outline: none;
+}
+
+#send {
+    background: var(--gov-blue-dark);
+    height: 50px;
+    padding: 0 25px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.map-container { 
+        height: 350px; 
+        width: 100%; 
+        border-radius: 10px; 
+        margin-top: 10px; 
+        border: 1px solid #ddd;
+    }
+
+.quick-options {
+    display: flex;
+    flex-wrap: nowrap; /* Impede que os botões quebrem a linha */
+    overflow-x: auto;  /* Ativa o scroll horizontal */
+    gap: 8px;
+    padding-bottom: 10px;
+    scrollbar-width: thin; /* Para navegadores modernos */
+}
+
+.quick-options button {
+    flex: 0 0 auto; /* Impede que o botão encolha */
+    white-space: nowrap; /* Mantém o texto em uma linha só */
+}
+
+/* ===== RESPONSIVIDADE (MOBILE) ===== */
+@media (max-width: 600px) {
+    .app {
+        margin: 0;
+        max-width: 100%;
+        border-radius: 0;
+        border: none;
+        height: 100vh; /* Ocupa a tela toda */
+        display: flex;
+        flex-direction: column;
+    }
+
+    .header {
+        padding: 15px;
+    }
+
+    .header h1 {
+        font-size: 1rem; /* Diminui o título no mobile */
+    }
+
+    .chat-area {
+        height: 100%; /* Ajusta para preencher o que sobra da tela */
+        flex: 1;
+    }
+
+    .messages {
+        padding: 15px; /* Menos espaço sobrando nas laterais */
+    }
+
+    .bubble {
+        max-width: 90%; /* Balões ocupam mais largura no mobile */
+        font-size: 0.95rem;
+    }
+
+    .input-area {
+        padding: 15px;
+        gap: 10px;
+    }
+
+    #send {
+        padding: 0 15px;
+        font-size: 0.8rem;
+    }
+
+    /* Ajuste do Mapa no Mobile */
+    .map-container {
+        height: 250px; /* Mapa um pouco menor para sobrar espaço de conversa */
+    }
+}
