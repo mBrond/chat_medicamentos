@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://127.0.0.1:8000'; // Sem barra no final
+
+const API_BASE_URL = window.location.origin;
 
 const messagesDiv = document.getElementById('messages');
 const questionInput = document.getElementById('question');
@@ -9,24 +10,30 @@ const BOT_AVATAR = '/static/img/pfp_bot.png';
 const quickOptionsHome = ['Onde retirar Medicamento', 'Informações com CID', 'Informações com Medicamento'];
 const quickOptionsPosConsulta = ['Onde Retirar?', 'Voltar'];
 
-/* ===== ESTADO DO CHAT ===== */
-let currentIntent = null; 
-let state = 'CHOOSING_OPTION'; 
+let currentIntent = null;
+let state = 'CHOOSING_OPTION';
 let lastSearchTerm = null;
 
-/* ===== UTILS ===== */
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
-function showTypingIndicator() {
-    const typing = document.createElement('div');
-    typing.className = 'message bot typing-indicator';
-    typing.innerHTML = `<img src="${BOT_AVATAR}" class="avatar"><div class="bubble">Digitando...</div>`;
-    messagesDiv.appendChild(typing);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    return typing;
+/* ===== MONITORAMENTO (HEALTH CHECK) ===== */
+async function checkHealth() {
+    try {
+        const r = await fetch(`${API_BASE_URL}/health`);
+        if (r.ok) {
+            healthIndicator.textContent = 'online';
+            healthIndicator.className = 'status-ok';
+        } else {
+            healthIndicator.textContent = 'offline';
+            healthIndicator.className = 'status-fail';
+        }
+    } catch {
+        healthIndicator.textContent = 'offline';
+        healthIndicator.className = 'status-fail';
+    }
 }
 
-/* ===== COMUNICAÇÃO COM BACKEND UNIFICADA ===== */
+/* ===== COMUNICAÇÃO COM BACKEND ===== */
 async function callConversationAPI(text, intent) {
     const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
@@ -38,7 +45,6 @@ async function callConversationAPI(text, intent) {
 }
 
 /* ===== HANDLERS DE INTERFACE ===== */
-
 async function handleOptionsClick(option) {
     const text = option.trim();
     addMessage(text, 'user');
@@ -48,13 +54,12 @@ async function handleOptionsClick(option) {
         return;
     }
 
-    // Mapeamento de Intenções baseadas nos botões
     if (text === 'Onde retirar Medicamento') {
         state = 'WAITING_VALUE';
         currentIntent = 'onde retirar medicamento';
         await delay(500);
         addMessage("Certo! Digite o nome do medicamento para eu localizar as farmácias:", 'bot');
-    } 
+    }
     else if (text === 'Informações com CID') {
         state = 'WAITING_VALUE';
         currentIntent = 'cid';
@@ -70,13 +75,12 @@ async function handleOptionsClick(option) {
     else if (text === 'Onde Retirar?') {
         if (lastSearchTerm) {
             currentIntent = 'onde retirar medicamento';
-            // O estado muda para processando e chama o handler com o termo salvo
+            addMessage(`Buscando pontos de retirada para: ${lastSearchTerm}...`, 'bot');
             await chatHandler(lastSearchTerm);
         } else {
-            // Caso o usuário clique sem ter buscado nada antes
             state = 'WAITING_VALUE';
             currentIntent = 'onde retirar medicamento';
-            addMessage("Certo! Digite o nome do medicamento para eu localizar:", 'bot');
+            addMessage("Digite o nome do medicamento para eu localizar:", 'bot');
         }
     }
 }
@@ -91,36 +95,30 @@ async function chatHandler(text) {
         const data = await callConversationAPI(text, currentIntent);
         typing.remove();
 
-
-
-        console.log("Resposta do backend:", data);
-        
         if (data.map_data) {
             addMessage("Encontrei os seguintes locais para retirada:", 'bot', null, null, data.map_data);
-            state = 'CHOOSING_OPTION'; 
+            state = 'CHOOSING_OPTION';
             await delay(1000);
             addBotOptions("Deseja realizar outra busca?", quickOptionsHome);
-        } 
-        // Se o backend retornar apenas texto (Resposta de CID ou Medicamento)
+        }
         else if (data.answer) {
             addMessage(data.answer, 'bot', data.latency);
             state = 'FINISHED_SEARCH';
+            // Salva o termo para o botão "Onde Retirar?" usar depois
+            lastSearchTerm = text;
             await delay(500);
             addBotOptions("O que deseja fazer agora?", quickOptionsPosConsulta);
         }
-        lastSearchTerm = text;
-
     } catch (error) {
         if(typing) typing.remove();
         addMessage("Desculpe, tive um problema ao consultar essas informações.", 'bot');
         resetToHome();
     } finally {
-        state = state === 'PROCESSING' ? 'CHOOSING_OPTION' : state;
+        if (state === 'PROCESSING') state = 'CHOOSING_OPTION';
     }
 }
 
-/* ===== CORE DO CHAT (MENSAGENS) ===== */
-
+/* ===== RENDERIZAÇÃO DE MENSAGENS ===== */
 function addMessage(text, type='user', latency = null, imageUrl = null, mapData = null) {
     const div = document.createElement('div');
     div.className = `message ${type}`;
@@ -136,11 +134,9 @@ function addMessage(text, type='user', latency = null, imageUrl = null, mapData 
     bubble.className = 'bubble';
     bubble.style.whiteSpace = 'pre-wrap';
     bubble.textContent = text;
-    
-    if (mapData) {
-        console.log("Renderizando mapa com dados:", mapData);
-        mapa_msg(mapData, bubble);
-    }
+
+    if (mapData) mapa_msg(mapData, bubble);
+    if (imageUrl) img_msg(imageUrl, bubble);
 
     if (latency) {
         const timeDiv = document.createElement('div');
@@ -157,8 +153,8 @@ function addMessage(text, type='user', latency = null, imageUrl = null, mapData 
 function addBotOptions(text, options) {
     const div = document.createElement('div');
     div.className = 'message bot';
-    
     div.innerHTML = `<img src="${BOT_AVATAR}" class="avatar">`;
+
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
     bubble.textContent = text;
@@ -179,6 +175,66 @@ function addBotOptions(text, options) {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
+/* ===== FUNÇÕES DE APOIO (MAPA E VISUAL) ===== */
+function showTypingIndicator() {
+    const typing = document.createElement('div');
+    typing.className = 'message bot typing-indicator';
+    typing.innerHTML = `<img src="${BOT_AVATAR}" class="avatar"><div class="bubble">Digitando...</div>`;
+    messagesDiv.appendChild(typing);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    return typing;
+}
+
+function img_msg(imageUrl, parentBubble) {
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.className = 'bot-image';
+    img.style.width = '100%';
+    img.style.borderRadius = '8px';
+    parentBubble.appendChild(img);
+}
+
+function mapa_msg(mapData, parentBubble) {
+    const mapId = `map-${Date.now()}`;
+    const mapDiv = document.createElement('div');
+    mapDiv.id = mapId;
+    mapDiv.className = 'map-container';
+    mapDiv.style.height = '250px';
+    parentBubble.appendChild(mapDiv);
+
+    setTimeout(() => {
+        const map = L.map(mapId);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        const bounds = L.latLngBounds();
+        if (mapData.markers && mapData.markers.length > 0) {
+            mapData.markers.forEach(m => {
+                let popupContent = `<b>${m.nome}</b><p>${m.endereco || ''}</p>`;
+                if (m.imagem) popupContent += `<img src="${m.imagem}" style="width:100%">`;
+
+                const marker = L.marker([m.lat, m.lng]).addTo(map).bindPopup(popupContent);
+                bounds.extend(marker.getLatLng());
+            });
+
+            if (mapData.markers.length > 1) map.fitBounds(bounds, { padding: [30, 30] });
+            else map.setView([mapData.markers[0].lat, mapData.markers[0].lng], 15);
+        } else {
+            map.setView(mapData.center || [-29.684, -53.806], 13);
+        }
+        setTimeout(() => map.invalidateSize(), 200);
+    }, 0);
+}
+
+function resetToHome() {
+    state = 'CHOOSING_OPTION';
+    currentIntent = null;
+    lastSearchTerm = null;
+    addBotOptions("Olá!. Como posso ajudar hoje?", quickOptionsHome);
+}
+
+/* ===== EVENTOS E INICIALIZAÇÃO ===== */
 async function sendMessage() {
     const text = questionInput.value.trim();
     if (!text || state === 'PROCESSING') return;
@@ -195,78 +251,20 @@ async function sendMessage() {
     }
 }
 
-function resetToHome() {
-    state = 'CHOOSING_OPTION';
-    currentIntent = null;
-    addBotOptions("Olá! Sou o assistente do SUS. Como posso ajudar hoje?", quickOptionsHome);
-}
-
-// Event Listeners
 sendBtn.addEventListener('click', sendMessage);
 questionInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
-window.onload = resetToHome;
 
-
-//mensagens
-
-function mapa_msg(mapData, parentBubble) {
-    const mapId = `map-${Date.now()}`;
-    const mapDiv = document.createElement('div');
-    mapDiv.id = mapId;
-    mapDiv.className = 'map-container';
-    parentBubble.appendChild(mapDiv);
-
-    setTimeout(() => {
-        const map = L.map(mapId);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-
-        map.on('popupopen', function(e) {
-            const px = map.project(e.target._popup._latlng); // pega a posição do popup
-            px.y -= e.target._popup._container.clientHeight / 2; // compensa a altura do balão
-            map.panTo(map.unproject(px), { animate: true }); // centraliza suavemente
-        });
-
-        const bounds = L.latLngBounds();
-
-        if (mapData.markers && mapData.markers.length > 0) {
-            mapData.markers.forEach(m => {
-                let popupContent = `<div style="max-width: 200px;">
-                    <b style="font-size: 14px;">${m.nome}`;
-                
-                
-                if (m.imagem) {
-                    popupContent += `<img src="${m.imagem}" alt="${m.nome}" 
-                                    style="width: 100%; height: auto; border-radius: 8px; margin-top: 8px;">`;
-                }
-
-                popupContent += `<p style="margin-top: 8px; font-size: 12px;">${m.endereco || ''}</p>
-                </div>`;
-
-                const marker = L.marker([m.lat, m.lng])
-                    .addTo(map)
-                    .bindPopup(popupContent);
-                
-                bounds.extend(marker.getLatLng());
-            });
-
-            
-
-            // 3. Ajustar o mapa para que TODOS os marcadores fiquem visíveis
-            if (mapData.markers.length > 1) {
-                map.fitBounds(bounds, { padding: [50, 50] });
-            } else {
-                // Se for apenas um, centraliza normalmente com zoom fixo
-                map.setView([mapData.markers[0].lat, mapData.markers[0].lng], 15);
-            }
-        } else {
-            // Caso receba uma lista vazia, usa o centro padrão
-            map.setView(mapData.center || [-29.684, -53.806], 13);
-        }
-
-        setTimeout(() => { map.invalidateSize(); }, 200);
-    }, 0);
+// Ajuste para Mobile (Teclado)
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+        const viewHeight = window.visualViewport.height;
+        const appContainer = document.querySelector('.app');
+        if(appContainer) appContainer.style.height = `${viewHeight}px`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
 }
+
+window.onload = () => {
+    checkHealth();
+    resetToHome();
+};
