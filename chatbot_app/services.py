@@ -157,41 +157,47 @@ def buscando_com_nome_medicamento(text):
     if not dict_filtros['resultados_exatos'].empty:
         resultado = dict_filtros['resultados_exatos']
         resultado.drop_duplicates(inplace=True)
+        match_type = 'exato'
     elif dict_filtros['resultados_semelhantes'].empty:
-        resultado = "Desculpe, não consegui encontrar informações sobre esse medicamento."
-        return resultado
+        return {"erro": "Desculpe, não consegui encontrar informações sobre esse medicamento."}
     else:
         resultado = dict_filtros['resultados_semelhantes']
+        match_type = 'semelhante'
 
-    resultado.drop_duplicates(subset='CID', inplace=True) #remove nome de medicamentos repetidos
+    resultado.drop_duplicates(subset='CID', inplace=True)
 
-    return resultado
+    # Retorna dict com o df + tipo de match + nome encontrado
+    return {
+        "df": resultado,
+        "match_type": match_type,
+        "nome_encontrado": resultado.iloc[0]['MEDICAMENTO']
+    }
 
 def buscando_endereco(nome_medicamento):
     dict_filtros = buscar_csv(nome_medicamento, 'MEDICAMENTO')
+
     if not dict_filtros['resultados_exatos'].empty:
         resultado = dict_filtros['resultados_exatos']
         resultado.drop_duplicates(inplace=True)
+        match_type = 'exato'
     elif dict_filtros['resultados_semelhantes'].empty:
-        resultado = "Desculpe, não consegui encontrar informações sobre esse medicamento."
-        return resultado
+        return {"erro": "Desculpe, não consegui encontrar informações sobre esse medicamento."}
     else:
         resultado = dict_filtros['resultados_semelhantes']
-
-
-    print(resultado)
+        match_type = 'semelhante'
 
     linha = resultado.iloc[0]
-
     a = str(linha['LOCAL_DE_DISPENSACAO'])
 
-    #gambiarra
-    if a == 'nan': # RETIRAR ISSO, TRANSFORMAR TODOS OS VALORES NAN DESSA COLUNA EM 'ESPECIAIS' (retirada presidente vargas)
+    if a == 'nan':
         locais = ['ESPECIAIS']
     else:
         locais = linha[linha == 1].index.tolist()
 
     conjunto_traduzido = tradutor_csv_enderecos(locais)
 
-    #retorna o nome da linha pois pode ter ido para um semelhante, nao identico
-    return {"medicamento": linha['MEDICAMENTO'], "locais": conjunto_traduzido}
+    return {
+        "medicamento": linha['MEDICAMENTO'],
+        "locais": conjunto_traduzido,
+        "match_type": match_type,
+    }

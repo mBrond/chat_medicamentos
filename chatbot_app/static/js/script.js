@@ -98,38 +98,43 @@ async function chatHandler(text) {
         const data = await callConversationAPI(text, currentIntent);
         typing.remove();
 
-
         console.log(data);
 
-        if (data.invalido){
+        if (data.invalido) {
             conversaSobreErro(data.invalido);
-            await delay(1000)
+            await delay(1000);
             resetToHome();
         }
-
         else if (data.map_data) {
-            addMessage("Encontrei os seguintes locais para retirada:", 'bot', null, null, data.map_data);
+            addMessage(
+                "Encontrei os seguintes locais para retirada:",
+                'bot', null, null, data.map_data,
+                data.match_type, data.nome_encontrado
+            );
             state = 'CHOOSING_OPTION';
             await delay(1000);
             addBotOptions("Deseja realizar outra busca?", quickOptionsHome);
         }
         else if (data.answer) {
-            addMessage(data.answer, 'bot', data.latency);
+            addMessage(
+                data.answer,
+                'bot', data.latency, null, null,
+                data.match_type, data.nome_encontrado
+            );
             state = 'FINISHED_SEARCH';
-
             lastSearchTerm = text;
             await delay(500);
             addBotOptions("O que deseja fazer agora?", quickOptionsPosConsulta);
         }
     } catch (error) {
-        if(typing) typing.remove();
+        if (typing) typing.remove();
         addMessage("Desculpe, tive um problema ao consultar essas informações.", 'bot');
         resetToHome();
-    } 
+    }
 }
 
 /* ===== RENDERIZAÇÃO DE MENSAGENS ===== */
-function addMessage(text, type='user', latency = null, imageUrl = null, mapData = null) {
+function addMessage(text, type = 'user', latency = null, imageUrl = null, mapData = null, matchType = null, nomeEncontrado = null) {
     const div = document.createElement('div');
     div.className = `message ${type}`;
 
@@ -142,8 +147,36 @@ function addMessage(text, type='user', latency = null, imageUrl = null, mapData 
 
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    bubble.style.whiteSpace = 'pre-wrap';
-    bubble.textContent = text;
+
+    // referente ao match do csv
+    if (type === 'bot' && matchType && nomeEncontrado) {
+        const badge = document.createElement('div');
+        badge.className = `match-badge ${matchType}`;
+
+        if (matchType === 'exato') {
+            badge.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Resultado exato: <strong style="margin-left:3px">${nomeEncontrado}</strong>
+            `;
+        } else {
+            badge.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                Resultado semelhante: <strong style="margin-left:3px">${nomeEncontrado}</strong>
+            `;
+        }
+
+        bubble.appendChild(badge);
+    }
+
+    //texto principal
+    const textNode = document.createElement('span');
+    textNode.style.whiteSpace = 'pre-wrap';
+    textNode.textContent = text;
+    bubble.appendChild(textNode);
 
     if (mapData) mapa_msg(mapData, bubble);
     if (imageUrl) img_msg(imageUrl, bubble);
