@@ -1,7 +1,7 @@
 import pandas as pd
 from fuzzywuzzy import fuzz
 
-csv_dados = '/home/MiguelBrondani/farmacia_chatbot/chatbot2/chatbot_app/static/dados/Medicamentos - unificado.csv'
+csv_dados = 'chatbot_app/static/dados/Medicamentos - unificado.csv'
 
 def procura_palavra_exata(df: pd.DataFrame, palavra: str, coluna: str):
     """Retorna todas as linhas do dataframe em que a palavra aparece na coluna
@@ -38,6 +38,21 @@ def procura_palavra_semelhante(df: pd.DataFrame, palavra: str, coluna: str, thre
 
     return df[mask]
 
+def retorna_palavra_mais_semelhante(df: pd.DataFrame, palavra: str, coluna: str, threshold=60):
+
+    palavra_lower = palavra.lower()
+
+    scores = df[coluna].astype(str).apply(
+        lambda x: fuzz.partial_ratio(str(x).lower(), palavra_lower)
+    )
+
+    max_score = scores.max()
+
+    if max_score >= threshold:
+        return df[scores == max_score]
+
+    return df.iloc[0:0]
+
 def buscar_csv(texto, coluna):
     """_summary_
 
@@ -56,7 +71,7 @@ def buscar_csv(texto, coluna):
 
     return_dict['resultados_exatos'] = procura_palavra_exata(df, texto, coluna)
 
-    return_dict['resultados_semelhantes'] = procura_palavra_semelhante(df, texto, coluna)
+    return_dict['resultados_semelhantes'] = retorna_palavra_mais_semelhante(df, texto, coluna)
 
     return return_dict
 
@@ -165,6 +180,8 @@ def buscando_endereco(nome_medicamento):
     else:
         resultado = dict_filtros['resultados_semelhantes']
 
+
+    print(resultado)
 
     linha = resultado.iloc[0]
 

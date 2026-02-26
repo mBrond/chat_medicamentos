@@ -2,7 +2,7 @@ import json
 
 from django.http import JsonResponse
 from django.shortcuts import render
-from .validacoes import validar_request
+from .validacoes import validar_request, validar_intent_cid
 from django.views.decorators.csrf import csrf_exempt
 
 from .services import buscando_com_cid, formata_resposta_cid, buscando_com_nome_medicamento, formata_resposta_medicamento, buscando_endereco
@@ -32,7 +32,11 @@ def conversation(request):
     if type(req) == JsonResponse: #requisicao invalida
         return req
     
+
     if req.intent.lower() == 'cid':
+        if validar_intent_cid(req) != 'ok':
+            return JsonResponse({"erro": "CID inválido"})
+
         df_dados = buscando_com_cid(req.text)
         resposta_chat_str = formata_resposta_cid(df_dados)
 
@@ -60,6 +64,8 @@ def conversation(request):
                 "endereco": info.get('endereco', "Endereço não informado"),
                 "imagem": info.get('imagem', None)
             })
+                    
+    
                 
                 
         if not marcadores_formatados:

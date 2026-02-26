@@ -7,7 +7,6 @@ class ChatRequest(BaseModel):
     intent: str
 
 
-
 def validar_chat_request(data):
     try:
         chat_request = ChatRequest(**data)
@@ -15,9 +14,17 @@ def validar_chat_request(data):
     except Exception as e:
         
         return JsonResponse({"detail": "Dados de entrada inválidos.", "error": str(e)}, status=400)
-    
 
-def validar_request(request, tipo): #muito encapsulamento? chamar direto as validacoes? 
+
+def validar_intent_cid(data:ChatRequest):
+    campo_intent = data.intent.lower().strip()
+    
+    if len(campo_intent) <=3 or len(campo_intent) > 5:
+        return "Tamanho cid inválido"
+    
+    return "ok"
+
+def validar_request(request, tipo): 
     """_summary_
 
     Args:
@@ -34,7 +41,7 @@ def validar_request(request, tipo): #muito encapsulamento? chamar direto as vali
 
     if tipo =='conversation':
         req = validar_chat_request(data)
-
+        
     return req
 
 

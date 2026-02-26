@@ -50,6 +50,7 @@ async function handleOptionsClick(option) {
     addMessage(text, 'user');
 
     if (text.toLowerCase() === 'voltar') {
+        await delay(500);
         resetToHome();
         return;
     }
@@ -95,7 +96,17 @@ async function chatHandler(text) {
         const data = await callConversationAPI(text, currentIntent);
         typing.remove();
 
-        if (data.map_data) {
+
+        console.log(data);
+
+        if (data.erro){
+            console.log(data.erro);
+            conversaSobreErro(data.erro);
+            await delay(1000)
+            resetToHome();
+        }
+
+        else if (data.map_data) {
             addMessage("Encontrei os seguintes locais para retirada:", 'bot', null, null, data.map_data);
             state = 'CHOOSING_OPTION';
             await delay(1000);
@@ -104,7 +115,7 @@ async function chatHandler(text) {
         else if (data.answer) {
             addMessage(data.answer, 'bot', data.latency);
             state = 'FINISHED_SEARCH';
-            // Salva o termo para o botão "Onde Retirar?" usar depois
+
             lastSearchTerm = text;
             await delay(500);
             addBotOptions("O que deseja fazer agora?", quickOptionsPosConsulta);
@@ -113,9 +124,7 @@ async function chatHandler(text) {
         if(typing) typing.remove();
         addMessage("Desculpe, tive um problema ao consultar essas informações.", 'bot');
         resetToHome();
-    } finally {
-        if (state === 'PROCESSING') state = 'CHOOSING_OPTION';
-    }
+    } 
 }
 
 /* ===== RENDERIZAÇÃO DE MENSAGENS ===== */
@@ -231,16 +240,28 @@ function resetToHome() {
     state = 'CHOOSING_OPTION';
     currentIntent = null;
     lastSearchTerm = null;
-    addBotOptions("Olá!. Como posso ajudar hoje?", quickOptionsHome);
+    addBotOptions("Como posso ajudar?", quickOptionsHome);
+}
+
+function conversaSobreErro(erro) {
+    if (erro === 'CID inválido') {
+        addMessage("Não entendi qual CID você procura. Informe um CID com no mínimo 3 e no máximo 5 caracteres.", 'bot');
+    } else {
+        addMessage(`Ops! Ocorreu um problema: ${erro}`, 'bot');
+    }
 }
 
 /* ===== EVENTOS E INICIALIZAÇÃO ===== */
 async function sendMessage() {
     const text = questionInput.value.trim();
     if (!text || state === 'PROCESSING') return;
-
     addMessage(text, 'user');
     questionInput.value = '';
+
+    if(text.toLowerCase() === 'voltar') {
+        resetToHome();
+        return;
+    }
 
     if (state === 'WAITING_VALUE') {
         await chatHandler(text);
@@ -266,5 +287,8 @@ if (window.visualViewport) {
 
 window.onload = () => {
     checkHealth();
-    resetToHome();
+    state = 'CHOOSING_OPTION';
+    currentIntent = null;
+    lastSearchTerm = null;
+    addBotOptions("Olá! Como posso ajudar?", quickOptionsHome);
 };
