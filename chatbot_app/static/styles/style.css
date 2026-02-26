@@ -73,7 +73,7 @@ body {
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: 100dvh;           /* dynamic viewport height — key for mobile */
+    height: 100dvh;
     max-width: 520px;
     margin: 0 auto;
     background: var(--white);
@@ -109,7 +109,6 @@ body {
     z-index: 10;
 }
 
-/* Subtle diagonal accent */
 .header::after {
     content: '';
     position: absolute;
@@ -118,23 +117,23 @@ body {
     pointer-events: none;
 }
 
+/* Logo + título empilhados no centro do header */
 .header-left {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
+    align-items: center;
+    gap: 5px;
     min-width: 0;
-    grid-column: 1;
+    grid-column: 2;
 }
 
-/* Logo em fundo branco para preservar as cores originais */
 .logo-wrap {
     flex-shrink: 0;
     background: var(--white);
     border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     overflow: hidden;
     padding: 5px 8px;
 }
@@ -147,27 +146,23 @@ body {
     display: block;
 }
 
-/* Título abaixo da logo */
 .header-titles {
     display: flex;
     flex-direction: column;
+    align-items: center;
     min-width: 0;
-    padding-left: 2px;
 }
 
-/* Label escondida — info já está na logo */
 .header-label {
     display: none;
 }
 
 .header-title {
     font-size: 11px;
-    font-weight: 500;
-    color: rgba(255,255,255,0.70);
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.10em;
     text-transform: uppercase;
 }
 
@@ -235,8 +230,6 @@ body {
     gap: 4px;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
-
-    /* Custom scrollbar */
     scrollbar-width: thin;
     scrollbar-color: var(--gray-300) transparent;
 }
@@ -257,7 +250,6 @@ body {
 .message.user  { flex-direction: row-reverse; }
 .message.bot   { flex-direction: row; }
 
-/* Group spacing */
 .message + .message.user { margin-top: 4px; }
 .message + .message.bot  { margin-top: 4px; }
 .message.user + .message.bot,
@@ -279,7 +271,6 @@ body {
     background: var(--blue-50);
 }
 
-/* Hide avatar when bot messages are consecutive (JS can add .hide-avatar) */
 .message.bot.hide-avatar .avatar { visibility: hidden; }
 
 /* ===== BUBBLES ===== */
@@ -298,6 +289,8 @@ body {
     border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) 4px;
     border: 1px solid var(--gray-200, #e5e7eb);
     box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
 }
 
 .message.user .bubble {
@@ -387,6 +380,41 @@ body {
     font-family: var(--font-mono);
     opacity: 0.55;
     letter-spacing: 0.03em;
+}
+
+/* ===== MATCH TYPE BADGE ===== */
+/*
+ * Verde  (.exato)     — resultado encontrado com nome idêntico ao buscado
+ * Amarelo (.semelhante) — resultado aproximado por similaridade de string
+ * O JS insere este elemento antes do texto do balão quando
+ * a API retorna { match_type: 'exato' | 'semelhante', nome_encontrado: '...' }
+ */
+.match-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    margin-bottom: 8px;
+    width: fit-content;
+}
+
+.match-badge.exato {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.match-badge.semelhante {
+    background: #fef9c3;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.match-badge svg {
+    flex-shrink: 0;
 }
 
 /* ===== MAP CONTAINER ===== */
@@ -564,33 +592,88 @@ body {
     gap: 5px;
 }
 
-/* ===== MATCH TYPE BADGE ===== */
-.match-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11.5px;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: var(--radius-full);
-    margin-bottom: 8px;
+
+/* ===== TOAST DE AVISO ===== */
+.toast {
+    position: fixed;
+    bottom: calc(var(--input-h) + 16px);
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    width: calc(100% - 32px);
+    max-width: 488px;
+    background: var(--gray-900);
+    color: var(--white);
+    border-radius: var(--radius-lg);
+    padding: 13px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    box-shadow: var(--shadow-lg);
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        opacity    var(--anim-normal) var(--ease-smooth),
+        transform  var(--anim-normal) var(--ease-spring);
 }
 
-.match-badge.exato {
-    background: #dcfce7;
-    color: #15803d;
-    border: 1px solid #bbf7d0;
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: all;
 }
 
-.match-badge.semelhante {
-    background: #fef9c3;
-    color: #92400e;
-    border: 1px solid #fde68a;
-}
-
-.match-badge svg {
+.toast-icon {
     flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    background: var(--amber-500);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
 }
+
+.toast-icon svg {
+    width: 12px;
+    height: 12px;
+    color: var(--gray-900);
+}
+
+.toast-body {
+    flex: 1;
+}
+
+.toast-title {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 2px;
+}
+
+.toast-text {
+    font-size: 12px;
+    color: rgba(255,255,255,0.70);
+    line-height: 1.45;
+}
+
+.toast-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    cursor: pointer;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1;
+    align-self: flex-start;
+    transition: color var(--anim-fast);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.toast-close:hover { color: var(--white); }
 
 /* ===== INPUT AREA ===== */
 .input-area {
@@ -630,7 +713,6 @@ textarea {
     overflow-y: auto;
     outline: none;
     padding: 2px 0;
-    /* Remove scrollbar in textarea */
     scrollbar-width: none;
 }
 
@@ -662,7 +744,7 @@ textarea::placeholder {
 #send svg {
     width: 17px;
     height: 17px;
-    margin-left: 1px; /* optical center */
+    margin-left: 1px;
 }
 
 #send:hover {
@@ -733,5 +815,5 @@ textarea::placeholder {
     .bubble           { font-size: 15px; }
     .input-area       { padding: 12px 20px 18px; }
     .map-container    { height: 300px; }
-    .input-hint       { display: none; } /* Hide on desktop — users know Enter works */
+    .input-hint       { display: none; }
 }

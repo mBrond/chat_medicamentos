@@ -410,6 +410,57 @@ function openMapSheet(marker, index) {
     requestAnimationFrame(() => sheet.classList.add('open'));
 }
 
+/* ===== POPUP DE AVISOS ===== */
+let _toastEl = null;
+let _toastTimer = null;
+
+function getToast() {
+    if (_toastEl) return _toastEl;
+
+    _toastEl = document.createElement('div');
+    _toastEl.className = 'toast';
+    _toastEl.innerHTML = `
+        <div class="toast-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+        </div>
+        <div class="toast-body">
+            <div class="toast-title">Atenção</div>
+            <div class="toast-text">
+                Os dados indicam <strong>onde retirar</strong> o medicamento,
+                não a disponibilidade de estoque.
+            </div>
+        </div>
+        <button class="toast-close" aria-label="Fechar aviso">✕</button>
+    `;
+
+    _toastEl.querySelector('.toast-close').addEventListener('click', () => hideToast());
+    document.body.appendChild(_toastEl);
+    return _toastEl;
+}
+
+function showToast(duration = 60000) {
+    const toast = getToast();
+    if (_toastTimer) clearTimeout(_toastTimer);
+
+    toast.classList.remove('show');
+    void toast.offsetWidth;
+    toast.classList.add('show');
+
+    if (duration > 0) {
+        _toastTimer = setTimeout(() => hideToast(), duration);
+    }
+}
+
+function hideToast() {
+    if (!_toastEl) return;
+    _toastEl.classList.remove('show');
+    if (_toastTimer) clearTimeout(_toastTimer);
+}
+
 /* ===== EVENTOS E INICIALIZAÇÃO ===== */
 async function sendMessage() {
     const text = questionInput.value.trim();
@@ -447,6 +498,7 @@ if (window.visualViewport) {
 window.onload = () => {
     setupMapSheet();
     checkHealth();
+    showToast();
     state = 'CHOOSING_OPTION';
     currentIntent = null;
     lastSearchTerm = null;
