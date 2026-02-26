@@ -101,9 +101,8 @@ async function chatHandler(text) {
 
         console.log(data);
 
-        if (data.erro){
-            console.log(data.erro);
-            conversaSobreErro(data.erro);
+        if (data.invalido){
+            conversaSobreErro(data.invalido);
             await delay(1000)
             resetToHome();
         }
@@ -297,8 +296,11 @@ function resetToHome() {
 }
 
 function conversaSobreErro(erro) {
-    if (erro === 'CID inválido') {
+    if (erro === 'CID invalido') {
         addMessage("Não entendi qual CID você procura. Informe um CID com no mínimo 3 e no máximo 5 caracteres.", 'bot');
+    }
+    else if(erro === 'cid nao encontrado'){
+        addMessage("Não encontrei o CID informado na minha base de dados. Informe um CID com no mínimo 3 e no máximo 5 caracteres.", 'bot');
     } else {
         addMessage(`Ops! Ocorreu um problema: ${erro}`, 'bot');
     }

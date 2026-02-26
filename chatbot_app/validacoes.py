@@ -19,10 +19,10 @@ def validar_chat_request(data):
 def validar_intent_cid(data:ChatRequest):
     campo_intent = data.intent.lower().strip()
     
-    if len(campo_intent) <=3 or len(campo_intent) > 5:
-        return "Tamanho cid inválido"
+    if len(campo_intent) <3 or len(campo_intent) > 5:
+        return True
     
-    return "ok"
+    return False
 
 def validar_request(request, tipo): 
     """_summary_

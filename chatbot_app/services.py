@@ -143,13 +143,11 @@ def buscando_com_cid(text):
     if not dict_filtros['resultados_exatos'].empty:
         resultado = dict_filtros['resultados_exatos']
         resultado.drop_duplicates(inplace=True)
-    elif dict_filtros['resultados_semelhantes'].empty:
-        resultado = "Desculpe, não consegui encontrar informações sobre esse CID."
-        return resultado
-    else:
-        resultado = dict_filtros['resultados_semelhantes']
+        resultado.drop_duplicates(subset='MEDICAMENTO', inplace=True)
 
-    resultado.drop_duplicates(subset='MEDICAMENTO', inplace=True) #remove nome de medicamentos repetidos
+    else:
+        resultado = pd.DataFrame()
+
 
     return resultado
 

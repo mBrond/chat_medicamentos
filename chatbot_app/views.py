@@ -34,11 +34,15 @@ def conversation(request):
     
 
     if req.intent.lower() == 'cid':
-        if validar_intent_cid(req) != 'ok':
-            return JsonResponse({"erro": "CID inválido"})
+        if not validar_intent_cid(req):
+            return JsonResponse({"invalido": "CID invalido"})
 
         df_dados = buscando_com_cid(req.text)
-        resposta_chat_str = formata_resposta_cid(df_dados)
+        
+        if df_dados.empty:
+            return JsonResponse({'invalido':'cid nao encontrado'})
+        else:
+            resposta_chat_str = formata_resposta_cid(df_dados)
 
     elif req.intent.lower() == 'medicamento':
         df_dados = buscando_com_nome_medicamento(req.text)
