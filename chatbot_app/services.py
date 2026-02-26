@@ -128,11 +128,17 @@ def formata_resposta_medicamento(df: pd.DataFrame):
     linhas_formatadas = []
 
     for _, row in df.iterrows():
-            cid_nome = row.get('CID')
-            descricao = row.get('INFORMAÇÕES ADICIONAIS')
+        cid_nome = row.get('CID')
+        descricao = row.get('INFORMAÇÕES ADICIONAIS')
 
-            item_texto = f" **CID: {cid_nome}**\n {descricao}"
-            linhas_formatadas.append(item_texto)
+        if(pd.isna(cid_nome)):
+            cid_nome = 'Sem CID cadastrado para o medicamento.'
+
+        if(pd.isna(descricao)):
+            descricao = 'Sem informação extra cadastrada para o medicamento.'
+
+        item_texto = f" **CID: {cid_nome}**\n {descricao}"
+        linhas_formatadas.append(item_texto)
 
     introducao = "Encontrei as seguintes informações:\n\n"
     return introducao + "\n\n".join(linhas_formatadas)
@@ -164,9 +170,13 @@ def buscando_com_nome_medicamento(text):
         resultado = dict_filtros['resultados_semelhantes']
         match_type = 'semelhante'
 
+    
+
     resultado.drop_duplicates(subset='CID', inplace=True)
 
-    # Retorna dict com o df + tipo de match + nome encontrado
+    print(resultado)
+
+
     return {
         "df": resultado,
         "match_type": match_type,
