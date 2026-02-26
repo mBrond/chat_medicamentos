@@ -17,19 +17,21 @@ let lastSearchTerm = null;
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 /* ===== MONITORAMENTO (HEALTH CHECK) ===== */
+const statusDot = document.getElementById('status-dot');
+
 async function checkHealth() {
     try {
         const r = await fetch(`${API_BASE_URL}/health`);
         if (r.ok) {
             healthIndicator.textContent = 'online';
-            healthIndicator.className = 'status-ok';
+            statusDot.className = 'status-dot online';
         } else {
             healthIndicator.textContent = 'offline';
-            healthIndicator.className = 'status-fail';
+            statusDot.className = 'status-dot offline';
         }
     } catch {
         healthIndicator.textContent = 'offline';
-        healthIndicator.className = 'status-fail';
+        statusDot.className = 'status-dot offline';
     }
 }
 
@@ -205,25 +207,68 @@ function img_msg(imageUrl, parentBubble) {
 
 function mapa_msg(mapData, parentBubble) {
     const mapId = `map-${Date.now()}`;
+
+    // Wrapper relativo para o hint ficar posicionado
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'relative';
+
     const mapDiv = document.createElement('div');
     mapDiv.id = mapId;
     mapDiv.className = 'map-container';
-    mapDiv.style.height = '250px';
-    parentBubble.appendChild(mapDiv);
+
+    // Hint "Toque num marcador"
+    const hint = document.createElement('div');
+    hint.className = 'map-hint';
+    hint.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
+            <circle cx="12" cy="10" r="3"/>
+        </svg>
+        Toque num marcador
+    `;
+
+    wrapper.appendChild(mapDiv);
+    wrapper.appendChild(hint);
+    parentBubble.appendChild(wrapper);
 
     setTimeout(() => {
-        const map = L.map(mapId);
+        const map = L.map(mapId, {
+            zoomControl: true,
+            tap: true,          // habilita tap no iOS
+            tapTolerance: 15,   // maior tolerância de toque
+        });
+
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
         const bounds = L.latLngBounds();
-        if (mapData.markers && mapData.markers.length > 0) {
-            mapData.markers.forEach(m => {
-                let popupContent = `<b>${m.nome}</b><p>${m.endereco || ''}</p>`;
-                if (m.imagem) popupContent += `<img src="${m.imagem}" style="width:100%">`;
 
-                const marker = L.marker([m.lat, m.lng]).addTo(map).bindPopup(popupContent);
+        if (mapData.markers && mapData.markers.length > 0) {
+            mapData.markers.forEach((m, i) => {
+                // Ícone numerado customizado
+                const icon = L.divIcon({
+                    className: '',
+                    html: `<div style="
+                        width: 32px; height: 32px;
+                        background: #004a99;
+                        color: #fff;
+                        border-radius: 50% 50% 50% 0;
+                        transform: rotate(-45deg);
+                        display: flex; align-items: center; justify-content: center;
+                        font-size: 12px; font-weight: 700;
+                        border: 2px solid #fff;
+                        box-shadow: 0 2px 8px rgba(0,74,153,0.5);
+                        cursor: pointer;
+                    "><span style="transform: rotate(45deg)">${i + 1}</span></div>`,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32],
+                });
+
+                const marker = L.marker([m.lat, m.lng], { icon })
+                    .addTo(map)
+                    .on('click', () => openMapSheet(m, i));
+
                 bounds.extend(marker.getLatLng());
             });
 
@@ -232,6 +277,14 @@ function mapa_msg(mapData, parentBubble) {
         } else {
             map.setView(mapData.center || [-29.684, -53.806], 13);
         }
+
+        // Esconde o hint após 3s
+        setTimeout(() => {
+            hint.style.transition = 'opacity 0.5s';
+            hint.style.opacity = '0';
+            setTimeout(() => hint.remove(), 500);
+        }, 3000);
+
         setTimeout(() => map.invalidateSize(), 200);
     }, 0);
 }
@@ -249,6 +302,77 @@ function conversaSobreErro(erro) {
     } else {
         addMessage(`Ops! Ocorreu um problema: ${erro}`, 'bot');
     }
+}
+
+function closeMapSheet() {
+    const sheet   = document.getElementById('map-sheet');
+    const overlay = document.getElementById('map-sheet-overlay');
+    sheet.classList.remove('open');
+    overlay.classList.remove('open');
+}
+
+function setupMapSheet() {
+    if (document.getElementById('map-sheet')) return; // já existe
+
+    const overlay = document.createElement('div');
+    overlay.className = 'map-sheet-overlay';
+    overlay.id = 'map-sheet-overlay';
+
+    const sheet = document.createElement('div');
+    sheet.className = 'map-sheet';
+    sheet.id = 'map-sheet';
+    sheet.innerHTML = `
+        <div class="map-sheet-handle" id="map-sheet-handle"></div>
+        <div class="map-sheet-header">
+            <span class="map-sheet-title" id="map-sheet-title">Farmácia</span>
+            <button class="map-sheet-close" id="map-sheet-close" aria-label="Fechar">✕</button>
+        </div>
+        <div class="map-sheet-body" id="map-sheet-body"></div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+
+    // Fechar ao clicar no overlay ou no botão ✕
+    overlay.addEventListener('click', closeMapSheet);
+    document.getElementById('map-sheet-close').addEventListener('click', closeMapSheet);
+
+    // Fechar com swipe para baixo no handle
+    let startY = 0;
+    const handle = document.getElementById('map-sheet-handle');
+    handle.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
+    handle.addEventListener('touchend', e => {
+        if (e.changedTouches[0].clientY - startY > 60) closeMapSheet();
+    }, { passive: true });
+}
+
+function openMapSheet(marker, index) {
+    const title  = document.getElementById('map-sheet-title');
+    const body   = document.getElementById('map-sheet-body');
+    const sheet  = document.getElementById('map-sheet');
+    const overlay = document.getElementById('map-sheet-overlay');
+
+    title.textContent = marker.nome || 'Farmácia';
+
+    body.innerHTML = `
+        <div class="map-sheet-name">
+            <span class="map-sheet-badge">${index + 1}</span>
+            ${marker.nome || ''}
+        </div>
+        ${marker.endereco ? `
+        <div class="map-sheet-address">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span>${marker.endereco}</span>
+        </div>` : ''}
+        ${marker.imagem ? `<img class="map-sheet-img" src="${marker.imagem}" alt="${marker.nome}">` : ''}
+    `;
+
+    overlay.classList.add('open');
+    // Pequeno delay para a transição funcionar corretamente
+    requestAnimationFrame(() => sheet.classList.add('open'));
 }
 
 /* ===== EVENTOS E INICIALIZAÇÃO ===== */
@@ -286,9 +410,11 @@ if (window.visualViewport) {
 }
 
 window.onload = () => {
+    setupMapSheet();
     checkHealth();
     state = 'CHOOSING_OPTION';
     currentIntent = null;
     lastSearchTerm = null;
     addBotOptions("Olá! Como posso ajudar?", quickOptionsHome);
 };
+
