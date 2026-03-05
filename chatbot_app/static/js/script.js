@@ -111,8 +111,14 @@ async function chatHandler(text) {
                 'bot', null, null, data.map_data,
                 data.match_type, data.nome_encontrado
             );
-            state = 'CHOOSING_OPTION';
+            
             await delay(1000);
+            addMessage(
+                "Para retirar o medicamento, leve uma Cópia de Comprovante de residência, "+
+                "cópia do Cartão Nacional do SUS (CNS) e Cópia do documento de identificação com foto do paciente", 
+                "bot");
+            state = 'CHOOSING_OPTION';
+            await delay(900);
             addBotOptions("Deseja realizar outra busca?", quickOptionsHome);
         }
         else if (data.answer) {

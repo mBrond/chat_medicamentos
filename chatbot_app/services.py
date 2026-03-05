@@ -1,5 +1,5 @@
 import pandas as pd
-from fuzzywuzzy import fuzz
+from thefuzz import fuzz
 
 csv_dados = 'chatbot_app/static/dados/Medicamentos - unificado.csv'
 
