@@ -52,3 +52,11 @@ que o usuário seleciona opções rápidas ou digita um termo e recebe dados do 
 ```
 python manage.py runserver
 ```
+
+## Execução Testes
+
+Na raiz do projeto, executar:
+
+```
+python -m pytest chatbot_app/tests/tests_services.py
+```
