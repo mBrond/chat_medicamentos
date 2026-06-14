@@ -170,12 +170,12 @@ def buscando_com_nome_medicamento(text):
         resultado = dict_filtros['resultados_semelhantes']
         match_type = 'semelhante'
 
-    
-
     resultado.drop_duplicates(subset='CID', inplace=True)
 
-    print(resultado)
+    if resultado.empty:
+        return {"erro": "Desculpe, não consegui encontrar informações sobre esse medicamento."}
 
+    print(resultado)
 
     return {
         "df": resultado,
@@ -195,6 +195,9 @@ def buscando_endereco(nome_medicamento):
     else:
         resultado = dict_filtros['resultados_semelhantes']
         match_type = 'semelhante'
+
+    if resultado.empty:
+        return {"erro": "Desculpe, não consegui encontrar informações sobre esse medicamento."}
 
     linha = resultado.iloc[0]
     a = str(linha['LOCAL_DE_DISPENSACAO'])

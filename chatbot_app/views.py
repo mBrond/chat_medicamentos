@@ -43,6 +43,11 @@ def conversation(request):
             return JsonResponse({'invalido':'cid nao encontrado'})
         else:
             resposta_chat_str = formata_resposta_cid(df_dados)
+            return JsonResponse({
+                "answer": resposta_chat_str,
+                "match_type": "exato",
+                "nome_encontrado": df_dados.iloc[0]['MEDICAMENTO']
+            })
 
     elif req.intent.lower() == 'medicamento':
         resultado = buscando_com_nome_medicamento(req.text)

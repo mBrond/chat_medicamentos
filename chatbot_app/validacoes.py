@@ -36,10 +36,16 @@ def validar_request(request, tipo):
     if request.method != 'POST':
         return JsonResponse({"detail": "Método não permitido."}, status=405)
     
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "JSON inválido."}, status=400)
 
-    if tipo =='conversation':
+    req = None
+    if tipo == 'conversation':
         req = validar_chat_request(data)
+    else:
+        return JsonResponse({"detail": f"Tipo de requisição desconhecido: {tipo}"}, status=400)
         
     return req
 
