@@ -16,6 +16,18 @@ let lastSearchTerm = null;
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
+// Normaliza texto para comparação: minusculas, sem acentos, sem pontuação extra
+function normalizeText(s) {
+    if (!s) return '';
+    return s
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .replace(/[\?\!\.,]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 /* ===== MONITORAMENTO (HEALTH CHECK) ===== */
 const statusDot = document.getElementById('status-dot');
 
@@ -50,6 +62,8 @@ async function callConversationAPI(text, intent) {
 async function handleOptionsClick(option) {
     const text = option.trim();
     addMessage(text, 'user');
+
+    console.log(text);
 
     if (text.toLowerCase() === 'voltar') {
         await delay(500);
@@ -154,7 +168,7 @@ function addMessage(text, type = 'user', latency = null, imageUrl = null, mapDat
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
 
-    // referente ao match do csv
+    // Referente ao match do csv
     if (type === 'bot' && matchType && nomeEncontrado) {
         const badge = document.createElement('div');
         badge.className = `match-badge ${matchType}`;
@@ -178,11 +192,32 @@ function addMessage(text, type = 'user', latency = null, imageUrl = null, mapDat
         bubble.appendChild(badge);
     }
 
-    //texto principal
+    // Criando um container interno para o texto e o botão de áudio ficarem alinhados
+    const contentRow = document.createElement('div');
+    contentRow.className = 'bubble-content-row';
+
+    // Texto principal
     const textNode = document.createElement('span');
     textNode.style.whiteSpace = 'pre-wrap';
     textNode.textContent = text;
-    bubble.appendChild(textNode);
+    contentRow.appendChild(textNode);
+
+    // Botão de Áudio (TTS)
+    const audioBtn = document.createElement('button');
+    audioBtn.className = 'tts-button';
+    audioBtn.setAttribute('aria-label', 'Ouvir mensagem');
+    // Ícone SVG de Volume/Alto-falante
+    audioBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+    `;
+    // Configura o evento de clique chamando a função TTS passando o texto da mensagem
+    audioBtn.onclick = () => speakText(text);
+    contentRow.appendChild(audioBtn);
+
+    bubble.appendChild(contentRow);
 
     if (mapData) mapa_msg(mapData, bubble);
     if (imageUrl) img_msg(imageUrl, bubble);
@@ -471,10 +506,25 @@ function hideToast() {
 async function sendMessage() {
     const text = questionInput.value.trim();
     if (!text || state === 'PROCESSING') return;
+
+    const textLower = text.toLowerCase();
+
+    const normalized = normalizeText(text);
+    if (state === 'CHOOSING_OPTION' || !currentIntent) {
+        const allQuick = quickOptionsHome.concat(quickOptionsPosConsulta);
+        for (const opt of allQuick) {
+            if (normalizeText(opt) === normalized) {
+                questionInput.value = '';
+                await handleOptionsClick(opt);
+                return;
+            }
+        }
+    }
+
     addMessage(text, 'user');
     questionInput.value = '';
 
-    if(text.toLowerCase() === 'voltar') {
+    if(textLower === 'voltar') {
         resetToHome();
         return;
     }
@@ -487,6 +537,180 @@ async function sendMessage() {
         resetToHome();
     }
 }
+
+/* ===== FUNÇÃO TEXT-TO-SPEECH ===== */
+const speakText = (text) => {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.1;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        utterance.lang = 'pt-BR';
+        
+        // Seleciona uma voz feminina em português do Brasil
+        const voices = window.speechSynthesis.getVoices();
+        const femaleVoice = voices.find(voice => 
+            (voice.lang.includes('pt-BR') || voice.lang.includes('pt')) && 
+            voice.name.toLowerCase().includes('female')
+        );
+        
+        if (femaleVoice) {
+            utterance.voice = femaleVoice;
+        } else {
+            // Fallback: usa a primeira voz pt-BR disponível
+            const ptVoice = voices.find(voice => voice.lang.includes('pt-BR') || voice.lang.includes('pt'));
+            if (ptVoice) {
+                utterance.voice = ptVoice;
+            }
+        }
+
+        window.speechSynthesis.speak(utterance);
+    } else {
+        console.error("Este navegador não suporta Text-to-Speech.");
+    }
+};
+
+/* ===== RENDERIZAÇÃO DE MENSAGENS (ATUALIZADA) ===== */
+function addMessage(text, type = 'user', latency = null, imageUrl = null, mapData = null, matchType = null, nomeEncontrado = null) {
+    const div = document.createElement('div');
+    div.className = `message ${type}`;
+
+    if (type === 'bot') {
+        const avatar = document.createElement('img');
+        avatar.src = BOT_AVATAR;
+        avatar.className = 'avatar';
+        div.appendChild(avatar);
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+
+    // Referente ao match do csv
+    if (type === 'bot' && matchType && nomeEncontrado) {
+        const badge = document.createElement('div');
+        badge.className = `match-badge ${matchType}`;
+
+        if (matchType === 'exato') {
+            badge.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Resultado exato: <strong style="margin-left:3px">${nomeEncontrado}</strong>
+            `;
+        } else {
+            badge.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                Resultado semelhante: <strong style="margin-left:3px">${nomeEncontrado}</strong>
+            `;
+        }
+
+        bubble.appendChild(badge);
+    }
+
+    // Criando um container interno para o texto e o botão de áudio ficarem alinhados
+    const contentRow = document.createElement('div');
+    contentRow.className = 'bubble-content-row';
+
+    // Texto principal
+    const textNode = document.createElement('span');
+    textNode.style.whiteSpace = 'pre-wrap';
+    textNode.textContent = text;
+    contentRow.appendChild(textNode);
+
+    // Botão de Áudio (TTS)
+    const audioBtn = document.createElement('button');
+    audioBtn.className = 'tts-button';
+    audioBtn.setAttribute('aria-label', 'Ouvir mensagem');
+    // Ícone SVG de Volume/Alto-falante
+    audioBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+    `;
+    // Configura o evento de clique chamando a função TTS passando o texto da mensagem
+    audioBtn.onclick = () => speakText(text);
+    contentRow.appendChild(audioBtn);
+
+    bubble.appendChild(contentRow);
+
+    if (mapData) mapa_msg(mapData, bubble);
+    if (imageUrl) img_msg(imageUrl, bubble);
+
+    if (latency) {
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'message-time';
+        timeDiv.textContent = `⏱️ ${latency}s`;
+        bubble.appendChild(timeDiv);
+    }
+
+    div.appendChild(bubble);
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+/* ===== SPEECH TO TEXT (RECONHECIMENTO DE VOZ) — CORRIGIDO ===== */
+const micBtn = document.getElementById('mic-btn');
+let recognition = null;
+let isListening = false;
+
+// Verifica suporte no navegador (Chrome/Edge usem webkitSpeechRecognition)
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR'; // Define o idioma para Português do Brasil
+    recognition.continuous = false; // Para de ouvir quando o usuário faz uma pausa
+    recognition.interimResults = false; // Retorna apenas o resultado final estruturado
+
+    // Quando o navegador captura o áudio com sucesso e o transforma em texto
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        questionInput.value = transcript; // Insere o texto no textarea
+        questionInput.placeholder = "Digite uma mensagem…"; // Restaura o placeholder
+        questionInput.focus(); // Coloca o foco de volta na caixa de texto
+    };
+
+    // Controla o estado visual quando a gravação termina
+    recognition.onend = () => {
+        isListening = false;
+        micBtn.classList.remove('listening');
+        if (questionInput.placeholder === "Ouvindo...") {
+            questionInput.placeholder = "Digite uma mensagem…"; // Garante a restauração
+        }
+    };
+
+    recognition.onerror = (event) => {
+        console.error("Erro no reconhecimento de voz:", event.error);
+        isListening = false;
+        micBtn.classList.remove('listening');
+        questionInput.placeholder = "Digite uma mensagem…"; // Restaura em caso de erro
+    };
+
+    // Evento de clique no botão do microfone
+    micBtn.addEventListener('click', () => {
+        if (state === 'PROCESSING') return; // Evita escutar se o bot estiver pensando
+
+        if (isListening) {
+            recognition.stop();
+        } else {
+            isListening = true;
+            micBtn.classList.add('listening');
+            questionInput.value = ""; // Opcional: limpa o campo para a nova entrada de voz
+            questionInput.placeholder = "Ouvindo...";
+            recognition.start();
+        }
+    });
+} else {
+    // Se o navegador não suportar, esconde o botão discretamente
+    micBtn.style.display = 'none';
+    console.warn("Reconhecimento de voz não suportado neste navegador.");
+}
+
 
 sendBtn.addEventListener('click', sendMessage);
 questionInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });

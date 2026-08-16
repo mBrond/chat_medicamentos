@@ -817,3 +817,75 @@ textarea::placeholder {
     .map-container    { height: 300px; }
     .input-hint       { display: none; }
 }
+
+/* Alinhamento do texto com o botão de áudio */
+.bubble-content-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px; /* Espaço entre o texto e o ícone */
+}
+
+/* Estilização do botão de áudio */
+.tts-button {
+    background: none;
+    border: none;
+    padding: 4px;
+    margin-top: -2px; /* Ajuste fino de altura */
+    cursor: pointer;
+    color: currentColor; /* Herda a cor do texto do balão (funciona para bot e user) */
+    opacity: 0.6;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+    flex-shrink: 0; /* Impede o botão de esmagar se o texto for muito longo */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.tts-button:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.message.user .tts-button:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.tts-button:active {
+    transform: scale(0.9);
+}
+
+/* Estilo base do botão do microfone */
+#mic-btn {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, transform 0.1s ease;
+}
+
+#mic-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+#mic-btn:hover {
+    color: #004a99; /* Muda para a cor principal do seu app ao passar o mouse */
+}
+
+/* Efeito visual quando estiver gravando/ouvindo */
+#mic-btn.listening {
+    color: #dc3545; /* Vermelho */
+    animation: pulseMic 1.2s infinite ease-in-out;
+}
+
+@keyframes pulseMic {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
