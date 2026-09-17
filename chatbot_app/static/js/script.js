@@ -52,7 +52,10 @@ async function callConversationAPI(text, intent) {
     const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text, intent: intent })
+        body: JSON.stringify({ 
+            text: text, 
+            intent: intent || null // NLU no backend assume o controle se intent for null
+        })
     });
     if (!response.ok) throw new Error("Erro na API");
     return await response.json();
@@ -131,6 +134,8 @@ async function chatHandler(text) {
                 "Para retirar o medicamento, leve uma Cópia de Comprovante de residência, "+
                 "cópia do Cartão Nacional do SUS (CNS) e Cópia do documento de identificação com foto do paciente", 
                 "bot");
+            addMessage("Para mais informações e outros serviços, acesso o site da farmácias digital: https://farmaciadigital.rs.gov.br/  "
+                ,"bot")
             state = 'CHOOSING_OPTION';
             await delay(900);
             addBotOptions("Deseja realizar outra busca?", quickOptionsHome);
@@ -529,13 +534,7 @@ async function sendMessage() {
         return;
     }
 
-    if (state === 'WAITING_VALUE') {
-        await chatHandler(text);
-    } else {
-        addMessage("Por favor, selecione uma das opções abaixo para começar.", 'bot');
-        await delay(500);
-        resetToHome();
-    }
+    await chatHandler(text);
 }
 
 /* ===== FUNÇÃO TEXT-TO-SPEECH ===== */

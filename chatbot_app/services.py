@@ -3,6 +3,8 @@ import pandas as pd
 from .rag import config as rag_config
 from .rag.retriever import busca_exata, busca_semantica, resultados_semanticos_para_df
 
+from .nlu import extrair_intencao_e_entidade
+
 csv_dados = 'chatbot_app/static/dados/Medicamentos - unificado.csv'
 
 
@@ -161,3 +163,39 @@ def buscando_endereco(nome_medicamento):
         "locais": conjunto_traduzido,
         "match_type": match_type,
     }
+
+def processar_mensagem_usuario(mensagem: str) -> dict:
+    """Orquestra a extração de intenção e executa a busca correspondente."""
+    nlu_res = extrair_intencao_e_entidade(mensagem)
+    intent = nlu_res["intent"]
+    entidade = nlu_res["entidade"]
+
+    if not entidade:
+        return {
+            "erro": "Não consegui identificar o nome do medicamento na sua mensagem. Pode repetir?"
+        }
+
+    if intent == "onde_retirar":
+        # Passa apenas a entidade extraída para buscar o endereço no CSV/Chroma
+        resultado = buscando_endereco(entidade)
+        return {
+            "intent": intent,
+            "entidade": entidade,
+            "resultado": resultado,
+        }
+
+    elif intent == "buscar_cid":
+        resultado = buscando_com_cid(entidade)
+        return {
+            "intent": intent,
+            "entidade": entidade,
+            "resultado": resultado,
+        }
+
+    else:
+        resultado = buscando_com_nome_medicamento(entidade)
+        return {
+            "intent": intent,
+            "entidade": entidade,
+            "resultado": resultado,
+        }
